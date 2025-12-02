@@ -1,5 +1,5 @@
 import { callable, findModule, Millennium, sleep, DialogButton } from "@steambrew/client";
-import { render } from "react-dom";
+import { createRoot } from "react-dom/client";
 
 // Backend functions
 const get_app_x = callable<[{ app_id: number }], number>('Backend.get_app_x');
@@ -92,7 +92,8 @@ async function OnPopupCreation(popup) {
                             doneBtn.style.position = "absolute";
                             doneBtn.style.right = "20px";
                             doneBtn.style.bottom = "20px";
-                            render(<DialogButton style={{width: "fit-content", padding: "0px 20px"}} onClick={movementHandler}>Done</DialogButton>, doneBtn);
+                            const doneBtnRoot = createRoot(doneBtn);
+                            doneBtnRoot.render(<DialogButton style={{width: "fit-content", padding: "0px 20px"}} onClick={movementHandler}>Done</DialogButton>);
                             topCapsuleDiv.appendChild(doneBtn);
                         }
                     } else {

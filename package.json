@@ -12,16 +12,16 @@
   },
   "type": "module",
   "name": "steam-logo-pos",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Arbitrary repositioning of application logos",
   "main": "./frontend/index.jsx",
   "author": "luthor112",
   "license": "MIT",
   "dependencies": {
-    "@steambrew/api": "^5.7.4",
-    "@steambrew/client": "^5.7.4",
+    "@steambrew/api": "^5.8.3",
+    "@steambrew/client": "^5.8.3",
     "@steambrew/ttc": "^2.8.6",
-    "@steambrew/webkit": "^5.7.4",
+    "@steambrew/webkit": "^5.8.3",
     "preact": "^10.25.0"
   }
 }
