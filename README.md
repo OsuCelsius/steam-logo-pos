@@ -14,6 +14,7 @@ A Millennium plugin that allows for the arbitrary repositioning of application l
 
 ## Configuration
 - Configuration options are available through the Millennium Library Manager
+- Configuration change may require restarting Steam to take effect
 
 ## Prerequisites
 - [Millennium](https://steambrew.app/)
