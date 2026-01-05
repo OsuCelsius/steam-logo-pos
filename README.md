@@ -3,17 +3,17 @@
 A Millennium plugin that allows for the arbitrary repositioning of application logos.
 
 ## Features
-- If `show_button` is set to `true` in `config.json`
+- If `Show button` is enabled
     - Click the `ML` bettuon in the application header to enable moving the logo
     - Move application logo by dragging it
     - Click the `Done` button or the `ML` button again to lock the Logo
-- If `context_menu` is set to `true` in `config.json`
-    - Right click the header and select "Move Logo"
+- If `Context menu option` is enabled
+    - Right click the header and select `Move Logo`
     - Move application logo by dragging it
     - Click the `Done` button or select the menu item again to lock the Logo
 
 ## Configuration
-- `<STEAM>\plugins\steam-logo-pos\config.json`
+- Configuration options are available through the Millennium Library Manager
 
 ## Prerequisites
 - [Millennium](https://steambrew.app/)
@@ -25,6 +25,3 @@ A Millennium plugin that allows for the arbitrary repositioning of application l
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
-
-## Troubleshooting
-- In the case manual modification is needed, the positions are stored in `<STEAM>\plugins\steam-logo-pos\pos-db.json`

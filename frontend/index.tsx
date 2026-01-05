@@ -1,12 +1,6 @@
-import { callable, findModule, Millennium, sleep, DialogButton } from "@steambrew/client";
+import { callable, findModule, Millennium, sleep, DialogButton, IconsModule, definePlugin, Field, TextField, Toggle } from "@steambrew/client";
 import { createRoot } from "react-dom/client";
-
-// Backend functions
-const get_app_x = callable<[{ app_id: number }], number>('Backend.get_app_x');
-const get_app_y = callable<[{ app_id: number }], number>('Backend.get_app_y');
-const set_app_xy = callable<[{ app_id: number, pos_x: number, pos_y: number }], boolean>('Backend.set_app_xy');
-const get_context_menu_enabled = callable<[{}], boolean>('Backend.get_context_menu_enabled');
-const get_app_button_enabled = callable<[{}], boolean>('Backend.get_app_button_enabled');
+import React, { useState, useEffect } from "react";
 
 const WaitForElement = async (sel: string, parent = document) =>
 	[...(await Millennium.findElement(parent, sel))][0];
@@ -16,6 +10,34 @@ const WaitForElementTimeout = async (sel: string, parent = document, timeOut = 1
 
 const WaitForElementList = async (sel: string, parent = document) =>
 	[...(await Millennium.findElement(parent, sel))];
+
+var pluginConfig = {
+    context_menu: false,
+    show_button: true
+};
+
+var posDB = {};
+
+function get_app_x(app_id) {
+    if (app_id.toString() in posDB) {
+        return posDB[app_id.toString()][0];
+    } else {
+        return -1;
+    }
+}
+
+function get_app_y(app_id) {
+    if (app_id.toString() in posDB) {
+        return posDB[app_id.toString()][1];
+    } else {
+        return -1;
+    }
+}
+
+function set_app_xy(app_id, pos_x, pos_y) {
+    posDB[app_id.toString()] = [pos_x, pos_y];
+    localStorage.setItem("luthor112.steam-logo-pos.posdb", JSON.stringify(posDB));
+}
 
 async function OnPopupCreation(popup) {
     if (popup.m_strName === "SP Desktop_uid0") {
@@ -35,8 +57,8 @@ async function OnPopupCreation(popup) {
         MainWindowBrowserManager.m_browser.on("finished-request", async (currentURL, previousURL) => {
             if (MainWindowBrowserManager.m_lastLocation.pathname.startsWith("/library/app/")) {
                 const sizerDiv = await WaitForElement(`div.${findModule(e => e.BoxSizer).BoxSizer}`, popup.m_popup.document);
-                const savedX = await get_app_x({ app_id: uiStore.currentGameListSelection.nAppId });
-                const savedY = await get_app_y({ app_id: uiStore.currentGameListSelection.nAppId });
+                const savedX = get_app_x(uiStore.currentGameListSelection.nAppId);
+                const savedY = get_app_y(uiStore.currentGameListSelection.nAppId);
 
                 if (savedX !== -1 || savedY !== -1) {
                     sizerDiv.style.left = savedX + "px";
@@ -75,7 +97,7 @@ async function OnPopupCreation(popup) {
                             async function elementRelease() {
                                 popup.m_popup.document.onmouseup = null;
                                 popup.m_popup.document.onmousemove = null;
-                                await set_app_xy({ app_id: uiStore.currentGameListSelection.nAppId, pos_x: elmntX, pos_y: elmntY });
+                                set_app_xy(uiStore.currentGameListSelection.nAppId, elmntX, elmntY);
                             }
                         }
 
@@ -109,7 +131,7 @@ async function OnPopupCreation(popup) {
                     }
                 };
 
-                const appButtonEnabled = await get_app_button_enabled({});
+                const appButtonEnabled = pluginConfig.show_button;
                 if (appButtonEnabled) {
                     const gameSettingsButton = await WaitForElement(`div.${findModule(e => e.InPage).InPage} div.${findModule(e => e.AppButtonsContainer).AppButtonsContainer} > div.${findModule(e => e.MenuButtonContainer).MenuButtonContainer}:not([role="button"])`, popup.m_popup.document);
                     const oldMoveButton = gameSettingsButton.parentNode.querySelector('div.logo-move-button');
@@ -123,7 +145,7 @@ async function OnPopupCreation(popup) {
                     }
                 }
 
-                const contextMenuEnabled = await get_context_menu_enabled({});
+                const contextMenuEnabled = pluginConfig.context_menu;
                 if (contextMenuEnabled) {
 
                     // Disconnect the old observer before creating a new one to prevent conflicts.
@@ -184,9 +206,47 @@ async function OnPopupCreation(popup) {
     }
 }
 
-export default async function PluginMain() {
+const SingleSetting = (props) => {
+    const [boolValue, setBoolValue] = useState(false);
+
+    const saveConfig = () => {
+        localStorage.setItem("luthor112.steam-logo-pos.config", JSON.stringify(pluginConfig));
+    };
+
+    useEffect(() => {
+        if (props.type === "bool") {
+            setBoolValue(pluginConfig[props.name]);
+        }
+    }, []);
+
+    if (props.type === "bool") {
+        return (
+            <Field label={props.label} description={props.description} bottomSeparator="standard" focusable>
+                <Toggle value={boolValue} onChange={(value) => { setBoolValue(value); pluginConfig[props.name] = value; saveConfig(); }} />
+            </Field>
+        );
+    } else if (props.type === "text") {
+        return (
+            <Field label={props.label} description={props.description} bottomSeparator="standard" focusable>
+                <TextField defaultValue={pluginConfig[props.name]} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { pluginConfig[props.name] = e.currentTarget.value; saveConfig(); }} />
+            </Field>
+        );
+    }
+}
+
+const SettingsContent = () => {
+    return (
+        <div>
+            <SingleSetting name="context_menu" type="bool" label="Context menu option" description="Add Move Logo option to context menu" />
+            <SingleSetting name="show_button" type="bool" label="Show button" description="Add ML button to applcation page" />
+        </div>
+    );
+};
+
+async function pluginMain() {
     console.log("[steam-logo-pos] Frontend startup");
     await App.WaitForServicesInitialized();
+    await sleep(100);
 
     while (
         typeof g_PopupManager === 'undefined' ||
@@ -195,6 +255,14 @@ export default async function PluginMain() {
         await sleep(100);
     }
 
+    const storedConfig = JSON.parse(localStorage.getItem("luthor112.steam-logo-pos.config"));
+    pluginConfig = { ...pluginConfig, ...storedConfig };
+    console.log("[steam-logo-pos] Merged config:", pluginConfig);
+
+    const storedDB = JSON.parse(localStorage.getItem("luthor112.steam-logo-pos.posdb"));
+    posDB = { ...posDB, ...storedDB };
+    console.log("[steam-logo-pos] PosDB loaded");
+
     const doc = g_PopupManager.GetExistingPopup("SP Desktop_uid0");
 	if (doc) {
 		OnPopupCreation(doc);
@@ -202,3 +270,12 @@ export default async function PluginMain() {
 
 	g_PopupManager.AddPopupCreatedCallback(OnPopupCreation);
 }
+
+export default definePlugin(async () => {
+    await pluginMain();
+    return {
+		title: "Custom Logo Position",
+		icon: <IconsModule.Settings />,
+		content: <SettingsContent />,
+	};
+});
