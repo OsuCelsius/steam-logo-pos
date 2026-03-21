@@ -40,6 +40,7 @@ function set_app_xy(app_id, pos_x, pos_y) {
 }
 
 async function OnPopupCreation(popup) {
+    await sleep(10000);
     if (popup.m_strName === "SP Desktop_uid0") {
         
         let observer = null; // Declare observer here to hold its reference across navigations.
@@ -243,18 +244,9 @@ const SettingsContent = () => {
     );
 };
 
-async function pluginMain() {
+export default definePlugin(async () => {
     console.log("[steam-logo-pos] Frontend startup");
-    await App.WaitForServicesInitialized();
-    await sleep(100);
-
-    while (
-        typeof g_PopupManager === 'undefined' ||
-        typeof MainWindowBrowserManager === 'undefined'
-    ) {
-        await sleep(100);
-    }
-
+    
     const storedConfig = JSON.parse(localStorage.getItem("luthor112.steam-logo-pos.config"));
     pluginConfig = { ...pluginConfig, ...storedConfig };
     console.log("[steam-logo-pos] Merged config:", pluginConfig);
@@ -262,17 +254,9 @@ async function pluginMain() {
     const storedDB = JSON.parse(localStorage.getItem("luthor112.steam-logo-pos.posdb"));
     posDB = { ...posDB, ...storedDB };
     console.log("[steam-logo-pos] PosDB loaded");
-
-    const doc = g_PopupManager.GetExistingPopup("SP Desktop_uid0");
-	if (doc) {
-		OnPopupCreation(doc);
-	}
-
-	g_PopupManager.AddPopupCreatedCallback(OnPopupCreation);
-}
-
-export default definePlugin(async () => {
-    await pluginMain();
+    
+    Millennium.AddWindowCreateHook(OnPopupCreation);
+    
     return {
 		title: "Custom Logo Position",
 		icon: <IconsModule.Settings />,
