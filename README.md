@@ -19,6 +19,11 @@ A Millennium plugin that allows for the arbitrary repositioning of application l
 ## Prerequisites
 - [Millennium](https://steambrew.app/)
 
+## Installation
+- Copy the plugin ID from the [Millennium plugins](https://steambrew.app/plugins) page
+- Click `Plugins` and `Install a plugin` in the Millennium settings and paste the ID
+- Allow 10 seconds for the plugin to load after each startup
+
 ## Contributors
 
 <a href="https://github.com/luthor112/steam-logo-pos/graphs/contributors">
