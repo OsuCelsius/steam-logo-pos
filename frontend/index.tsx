@@ -1,24 +1,36 @@
-import { callable, findModule, Millennium, sleep, DialogButton, IconsModule, definePlugin, Field, TextField, Toggle } from "@steambrew/client";
+import { findModule, Millennium, sleep, DialogButton, IconsModule, definePlugin, Field, TextField, Toggle } from "@steambrew/client";
 import { createRoot } from "react-dom/client";
 import React, { useState, useEffect } from "react";
+
+declare global {
+    var MainWindowBrowserManager: any;
+    var uiStore: any;
+}
 
 const WaitForElement = async (sel: string, parent = document) =>
 	[...(await Millennium.findElement(parent, sel))][0];
 
-const WaitForElementTimeout = async (sel: string, parent = document, timeOut = 1000) =>
-	[...(await Millennium.findElement(parent, sel, timeOut))][0];
+/*const WaitForElementTimeout = async (sel: string, parent = document, timeOut = 1000) =>
+	[...(await Millennium.findElement(parent, sel, timeOut))][0];*/
 
-const WaitForElementList = async (sel: string, parent = document) =>
-	[...(await Millennium.findElement(parent, sel))];
+/*const WaitForElementList = async (sel: string, parent = document) =>
+	[...(await Millennium.findElement(parent, sel))];*/
 
-var pluginConfig = {
+type PluginConfig = {
+    context_menu: boolean;
+    show_button: boolean;
+}
+
+var pluginConfig: PluginConfig = {
     context_menu: false,
     show_button: true
 };
 
-var posDB = {};
+type PosDB = Record<string, number[]>;
 
-function get_app_x(app_id) {
+var posDB: PosDB = {};
+
+function get_app_x(app_id: number) {
     if (app_id.toString() in posDB) {
         return posDB[app_id.toString()][0];
     } else {
@@ -26,7 +38,7 @@ function get_app_x(app_id) {
     }
 }
 
-function get_app_y(app_id) {
+function get_app_y(app_id: number) {
     if (app_id.toString() in posDB) {
         return posDB[app_id.toString()][1];
     } else {
@@ -34,16 +46,16 @@ function get_app_y(app_id) {
     }
 }
 
-function set_app_xy(app_id, pos_x, pos_y) {
+function set_app_xy(app_id: number, pos_x: number, pos_y: number) {
     posDB[app_id.toString()] = [pos_x, pos_y];
     localStorage.setItem("luthor112.steam-logo-pos.posdb", JSON.stringify(posDB));
 }
 
-async function OnPopupCreation(popup) {
+async function OnPopupCreation(popup: any) {
     await sleep(10000);
     if (popup.m_strName === "SP Desktop_uid0") {
         
-        let observer = null; // Declare observer here to hold its reference across navigations.
+        let observer: MutationObserver | null = null; // Declare observer here to hold its reference across navigations.
 
         var mwbm = undefined;
         while (!mwbm) {
@@ -55,9 +67,12 @@ async function OnPopupCreation(popup) {
             }
         }
 
-        MainWindowBrowserManager.m_browser.on("finished-request", async (currentURL, previousURL) => {
+        MainWindowBrowserManager.m_browser.on("finished-request", async (currentURL: any, previousURL: any) => {
+            void currentURL;
+            void previousURL;
+
             if (MainWindowBrowserManager.m_lastLocation.pathname.startsWith("/library/app/")) {
-                const sizerDiv = await WaitForElement(`div.${findModule(e => e.BoxSizer).BoxSizer}`, popup.m_popup.document);
+                const sizerDiv = await WaitForElement(`div.${findModule(e => e.BoxSizer).BoxSizer}`, popup.m_popup.document) as HTMLElement;
                 const savedX = get_app_x(uiStore.currentGameListSelection.nAppId);
                 const savedY = get_app_y(uiStore.currentGameListSelection.nAppId);
 
@@ -68,13 +83,13 @@ async function OnPopupCreation(popup) {
 
                 const movementHandler = async () => {
                     if (!sizerDiv.classList.contains("logopos-header")) {
-                        async function makeDraggableElement(elmnt) {
+                        async function makeDraggableElement(elmnt: HTMLElement) {
                             var diffX = 0, diffY = 0, lastX = 0, lastY = 0, elmntX = 0, elmntY = 0;
                             elmnt.onmousedown = dragMouseDown;
                             elmnt.style.cursor = "move";
 
-                            async function dragMouseDown(e) {
-                                e = e || window.event;
+                            async function dragMouseDown(e: MouseEvent) {
+                                //e = e || window.event;
                                 e.preventDefault();
                                 lastX = e.clientX;
                                 lastY = e.clientY;
@@ -82,8 +97,8 @@ async function OnPopupCreation(popup) {
                                 popup.m_popup.document.onmousemove = elementDrag;
                             }
 
-                            async function elementDrag(e) {
-                                e = e || window.event;
+                            async function elementDrag(e: MouseEvent) {
+                                //e = e || window.event;
                                 e.preventDefault();
                                 diffX = lastX - e.clientX;
                                 diffY = lastY - e.clientY;
@@ -106,7 +121,7 @@ async function OnPopupCreation(popup) {
                         sizerDiv.classList.add("logopos-header");
 
                         const topCapsuleDiv = await WaitForElement(`div.${findModule(e => e.TopCapsule).TopCapsule}`, popup.m_popup.document);
-                        const oldDoneBtn = topCapsuleDiv.querySelector("div.logo-move-done-button");
+                        const oldDoneBtn = topCapsuleDiv.querySelector("div.logo-move-done-button") as HTMLElement;
                         if (oldDoneBtn) {
                             oldDoneBtn.style.display = "";
                         } else {
@@ -125,7 +140,7 @@ async function OnPopupCreation(popup) {
                         sizerDiv.classList.remove("logopos-header");
 
                         const topCapsuleDiv = await WaitForElement(`div.${findModule(e => e.TopCapsule).TopCapsule}`, popup.m_popup.document);
-                        const oldDoneBtn = topCapsuleDiv.querySelector("div.logo-move-done-button");
+                        const oldDoneBtn = topCapsuleDiv.querySelector("div.logo-move-done-button") as HTMLElement;
                         if (oldDoneBtn) {
                             oldDoneBtn.style.display = "none";
                         }
@@ -135,13 +150,13 @@ async function OnPopupCreation(popup) {
                 const appButtonEnabled = pluginConfig.show_button;
                 if (appButtonEnabled) {
                     const gameSettingsButton = await WaitForElement(`div.${findModule(e => e.InPage).InPage} div.${findModule(e => e.AppButtonsContainer).AppButtonsContainer} > div.${findModule(e => e.MenuButtonContainer).MenuButtonContainer}:not([role="button"])`, popup.m_popup.document);
-                    const oldMoveButton = gameSettingsButton.parentNode.querySelector('div.logo-move-button');
+                    const oldMoveButton = gameSettingsButton.parentNode!.querySelector('div.logo-move-button');
                     
                     if (!oldMoveButton) {
                         const moveButton = gameSettingsButton.cloneNode(true);
-                        moveButton.classList.add("logo-move-button");
-                        moveButton.firstChild.innerHTML = "ML";
-                        gameSettingsButton.parentNode.insertBefore(moveButton, gameSettingsButton.nextSibling);
+                        (moveButton as HTMLElement).classList.add("logo-move-button");
+                        (moveButton.firstChild! as HTMLElement).innerHTML = "ML";
+                        gameSettingsButton.parentNode!.insertBefore(moveButton, gameSettingsButton.nextSibling);
                         moveButton.addEventListener("click", movementHandler);
                     }
                 }
@@ -154,7 +169,7 @@ async function OnPopupCreation(popup) {
                         observer.disconnect();
                     }
 
-                    const hasSpecificMenuItems = (container) => {
+                    const hasSpecificMenuItems = (container: HTMLElement) => {
                         // _1n7Wloe5jZ6fSuvV18NNWI == contextMenuItem
                         const itemsText = Array.from(container.querySelectorAll(`div.${findModule(e => e.ContextMenuMouseOverlay).contextMenuItem}.contextMenuItem`))
                             .map(el => el.textContent.trim());
@@ -165,7 +180,7 @@ async function OnPopupCreation(popup) {
                         return requiredItems.every(item => itemsText.includes(item));
                     };
 
-                    const addMoveLogoButton = (container) => {
+                    const addMoveLogoButton = (container: HTMLElement) => {
                         if (!hasSpecificMenuItems(container)) return;
                         if (container.querySelector('.contextMenuItem.moveLogoAdded')) return;
 
@@ -190,10 +205,10 @@ async function OnPopupCreation(popup) {
                             mutation.addedNodes.forEach(node => {
                                 if (node.nodeType === 1) { // Element node
                                     // _2EstNjFIIZm_WUSKm5Wt7n == contextMenuContents
-                                    const container = node.querySelector(`div.${findModule(e => e.ContextMenuMouseOverlay).contextMenuContents}`) ||
-                                        (node.classList && node.classList.contains(`${findModule(e => e.ContextMenuMouseOverlay).contextMenuContents}`) ? node : null);
+                                    const container = (node as HTMLElement).querySelector(`div.${findModule(e => e.ContextMenuMouseOverlay).contextMenuContents}`) ||
+                                        ((node as HTMLElement).classList && (node as HTMLElement).classList.contains(`${findModule(e => e.ContextMenuMouseOverlay).contextMenuContents}`) ? node : null);
                                     if (container) {
-                                        addMoveLogoButton(container);
+                                        addMoveLogoButton(container as HTMLElement);
                                     }
                                 }
                             });
@@ -207,7 +222,19 @@ async function OnPopupCreation(popup) {
     }
 }
 
-const SingleSetting = (props) => {
+type BoolKeys = {
+    [K in keyof PluginConfig]: PluginConfig[K] extends boolean ? K : never
+  }[keyof PluginConfig];
+  
+type StringKeys = {
+    [K in keyof PluginConfig]: PluginConfig[K] extends string ? K : never
+}[keyof PluginConfig];
+
+type SingleSettingProps =
+  | { type: "bool"; name: BoolKeys; label: string; description: string }
+  | { type: "text"; name: StringKeys; label: string; description: string };
+
+const SingleSetting = (props: SingleSettingProps) => {
     const [boolValue, setBoolValue] = useState(false);
 
     const saveConfig = () => {
@@ -229,8 +256,12 @@ const SingleSetting = (props) => {
     } else if (props.type === "text") {
         return (
             <Field label={props.label} description={props.description} bottomSeparator="standard" focusable>
-                <TextField defaultValue={pluginConfig[props.name]} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { pluginConfig[props.name] = e.currentTarget.value; saveConfig(); }} />
+                <TextField defaultValue={pluginConfig[props.name]} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { (pluginConfig as any)[props.name] = e.currentTarget.value; saveConfig(); }} />
             </Field>
+        );
+    } else {
+        return (
+            <div>This should not happen...</div>
         );
     }
 }
@@ -247,15 +278,17 @@ const SettingsContent = () => {
 export default definePlugin(async () => {
     console.log("[steam-logo-pos] Frontend startup");
     
-    const storedConfig = JSON.parse(localStorage.getItem("luthor112.steam-logo-pos.config"));
+    const rawValue = localStorage.getItem("luthor112.steam-logo-pos.config");
+    const storedConfig: Partial<PluginConfig> = rawValue ? JSON.parse(rawValue) : {};
     pluginConfig = { ...pluginConfig, ...storedConfig };
     console.log("[steam-logo-pos] Merged config:", pluginConfig);
 
-    const storedDB = JSON.parse(localStorage.getItem("luthor112.steam-logo-pos.posdb"));
+    const rawDBValue = localStorage.getItem("luthor112.steam-logo-pos.posdb");
+    const storedDB: PosDB = rawDBValue ? JSON.parse(rawDBValue) : {};
     posDB = { ...posDB, ...storedDB };
     console.log("[steam-logo-pos] PosDB loaded");
     
-    Millennium.AddWindowCreateHook(OnPopupCreation);
+    Millennium.AddWindowCreateHook!(OnPopupCreation);
     
     return {
 		title: "Custom Logo Position",
