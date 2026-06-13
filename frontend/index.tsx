@@ -82,68 +82,62 @@ async function OnPopupCreation(popup: any) {
                 }
 
                 const movementHandler = async () => {
-                    if (!sizerDiv.classList.contains("logopos-header")) {
-                        async function makeDraggableElement(elmnt: HTMLElement) {
-                            var diffX = 0, diffY = 0, lastX = 0, lastY = 0, elmntX = 0, elmntY = 0;
-                            elmnt.onmousedown = dragMouseDown;
-                            elmnt.style.cursor = "move";
+                    const u = await WaitForElement(`div.${findModule(e => e.BoxSizer).BoxSizer}`, popup.m_popup.document) as HTMLElement;
+                    if (!u) return;
 
-                            async function dragMouseDown(e: MouseEvent) {
-                                //e = e || window.event;
-                                e.preventDefault();
-                                lastX = e.clientX;
-                                lastY = e.clientY;
-                                popup.m_popup.document.onmouseup = elementRelease;
-                                popup.m_popup.document.onmousemove = elementDrag;
-                            }
+                    if (u.classList.contains("logopos-header")) {
+                        u.onmousedown = null;
+                        u.style.cursor = "";
+                        u.classList.remove("logopos-header");
 
-                            async function elementDrag(e: MouseEvent) {
-                                //e = e || window.event;
-                                e.preventDefault();
-                                diffX = lastX - e.clientX;
-                                diffY = lastY - e.clientY;
-                                lastX = e.clientX;
-                                lastY = e.clientY;
-                                elmntY = (elmnt.offsetTop - diffY);
-                                elmntX = (elmnt.offsetLeft - diffX);
-                                elmnt.style.top = elmntY + "px";
-                                elmnt.style.left = elmntX + "px";
-                            }
+                        const topCapsule = await WaitForElement(`div.${findModule(e=>e.TopCapsule).TopCapsule}`, popup.m_popup.document);
+                        const doneBtn = topCapsule?.querySelector("div.logo-move-done-button") as HTMLElement;
 
-                            async function elementRelease() {
-                                popup.m_popup.document.onmouseup = null;
-                                popup.m_popup.document.onmousemove = null;
-                                set_app_xy(uiStore.currentGameListSelection.nAppId, elmntX, elmntY);
-                            }
-                        }
+                        if (doneBtn) doneBtn.style.display = "none";
+                        return;
+                    }
 
-                        makeDraggableElement(sizerDiv);
-                        sizerDiv.classList.add("logopos-header");
+                    let startX = 0, startY = 0, lastX = 0, lastY = 0;
 
-                        const topCapsuleDiv = await WaitForElement(`div.${findModule(e => e.TopCapsule).TopCapsule}`, popup.m_popup.document);
-                        const oldDoneBtn = topCapsuleDiv.querySelector("div.logo-move-done-button") as HTMLElement;
-                        if (oldDoneBtn) {
-                            oldDoneBtn.style.display = "";
-                        } else {
-                            const doneBtn = document.createElement('div');
-                            doneBtn.className = "logo-move-done-button";
-                            doneBtn.style.position = "absolute";
-                            doneBtn.style.right = "20px";
-                            doneBtn.style.bottom = "20px";
-                            const doneBtnRoot = createRoot(doneBtn);
-                            doneBtnRoot.render(<DialogButton style={{width: "fit-content", padding: "0px 20px"}} onClick={movementHandler}>Done</DialogButton>);
-                            topCapsuleDiv.appendChild(doneBtn);
-                        }
+                    u.onmousedown = ev => {
+                        ev.preventDefault();
+                        startX = ev.clientX;
+                        startY = ev.clientY;
+
+                        popup.m_popup.document.onmousemove = ev => {
+                            ev.preventDefault();
+                            lastX = u.offsetLeft + (ev.clientX - startX);
+                            lastY = u.offsetTop + (ev.clientY - startY);
+                            startX = ev.clientX;
+                            startY = ev.clientY;
+                            u.style.left = lastX + "px";
+                            u.style.top = lastY + "px";
+                        };
+
+                        popup.m_popup.document.onmouseup = async () => {
+                            popup.m_popup.document.onmousemove = null;
+                            popup.m_popup.document.onmouseup = null;
+                            set_app_xy(uiStore.currentGameListSelection.nAppId, lastX, lastY);
+                        };
+                    };
+
+                    u.style.cursor = "move";
+                    u.classList.add("logopos-header");
+
+                    const topCapsule = await WaitForElement(`div.${findModule(e=>e.TopCapsule).TopCapsule}`, popup.m_popup.document);
+
+                    let doneBtn = topCapsule.querySelector("div.logo-move-done-button") as HTMLElement;
+                    if (!doneBtn) {
+                        doneBtn = document.createElement("div");
+                        doneBtn.className = "logo-move-done-button";
+                        doneBtn.style.position = "absolute";
+                        doneBtn.style.right = "20px";
+                        doneBtn.style.bottom = "20px";
+                        const doneBtnRoot = createRoot(doneBtn);
+                        doneBtnRoot.render(<DialogButton style={{width: "fit-content", padding: "0px 20px"}} onClick={movementHandler}>Done</DialogButton>);
+                        topCapsule.appendChild(doneBtn);
                     } else {
-                        sizerDiv.onmousedown = null;
-                        sizerDiv.style.cursor = "";
-                        sizerDiv.classList.remove("logopos-header");
-
-                        const topCapsuleDiv = await WaitForElement(`div.${findModule(e => e.TopCapsule).TopCapsule}`, popup.m_popup.document);
-                        const oldDoneBtn = topCapsuleDiv.querySelector("div.logo-move-done-button") as HTMLElement;
-                        if (oldDoneBtn) {
-                            oldDoneBtn.style.display = "none";
-                        }
+                        doneBtn.style.display = "";
                     }
                 };
 
