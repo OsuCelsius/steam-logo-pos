@@ -56,6 +56,7 @@ async function OnPopupCreation(popup: any) {
     if (popup.m_strName === "SP Desktop_uid0") {
         
         let observer: MutationObserver | null = null; // Declare observer here to hold its reference across navigations.
+        let logoObserver: MutationObserver | null = null;
 
         var mwbm = undefined;
         while (!mwbm) {
@@ -72,13 +73,36 @@ async function OnPopupCreation(popup: any) {
             void previousURL;
 
             if (MainWindowBrowserManager.m_lastLocation.pathname.startsWith("/library/app/")) {
-                const sizerDiv = await WaitForElement(`div.${findModule(e => e.BoxSizer).BoxSizer}`, popup.m_popup.document) as HTMLElement;
-                const savedX = get_app_x(uiStore.currentGameListSelection.nAppId);
-                const savedY = get_app_y(uiStore.currentGameListSelection.nAppId);
+                
+                const enforcePosition = () => {
+                    const sizerDiv = popup.m_popup.document.querySelector(`div.${findModule(e => e.BoxSizer).BoxSizer}`) as HTMLElement;
+                    if (!sizerDiv) return;
 
-                if (savedX !== -1 || savedY !== -1) {
-                    sizerDiv.style.left = savedX + "px";
-                    sizerDiv.style.top = savedY + "px";
+                    if (sizerDiv.classList.contains("logopos-header")) return;
+
+                    const savedX = get_app_x(uiStore.currentGameListSelection.nAppId);
+                    const savedY = get_app_y(uiStore.currentGameListSelection.nAppId);
+
+                    if (savedX !== -1 || savedY !== -1) {
+                        if (sizerDiv.style.left !== `${savedX}px` || sizerDiv.style.top !== `${savedY}px`) {
+                            sizerDiv.style.left = savedX + "px";
+                            sizerDiv.style.top = savedY + "px";
+                        }
+                    }
+                };
+
+                if (logoObserver) {
+                    logoObserver.disconnect();
+                }
+
+                enforcePosition();
+
+                const topCapsule = await WaitForElement(`div.${findModule(e=>e.TopCapsule).TopCapsule}`, popup.m_popup.document);
+                if (topCapsule) {
+                    logoObserver = new MutationObserver(() => {
+                        enforcePosition();
+                    });
+                    logoObserver.observe(topCapsule, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
                 }
 
                 const movementHandler = async () => {
@@ -90,8 +114,8 @@ async function OnPopupCreation(popup: any) {
                         u.style.cursor = "";
                         u.classList.remove("logopos-header");
 
-                        const topCapsule = await WaitForElement(`div.${findModule(e=>e.TopCapsule).TopCapsule}`, popup.m_popup.document);
-                        const doneBtn = topCapsule?.querySelector("div.logo-move-done-button") as HTMLElement;
+                        const topCapsuleElement = await WaitForElement(`div.${findModule(e=>e.TopCapsule).TopCapsule}`, popup.m_popup.document);
+                        const doneBtn = topCapsuleElement?.querySelector("div.logo-move-done-button") as HTMLElement;
 
                         if (doneBtn) doneBtn.style.display = "none";
                         return;
@@ -124,8 +148,6 @@ async function OnPopupCreation(popup: any) {
                     u.style.cursor = "move";
                     u.classList.add("logopos-header");
 
-                    const topCapsule = await WaitForElement(`div.${findModule(e=>e.TopCapsule).TopCapsule}`, popup.m_popup.document);
-
                     let doneBtn = topCapsule.querySelector("div.logo-move-done-button") as HTMLElement;
                     if (!doneBtn) {
                         doneBtn = document.createElement("div");
@@ -157,7 +179,6 @@ async function OnPopupCreation(popup: any) {
 
                 const contextMenuEnabled = pluginConfig.context_menu;
                 if (contextMenuEnabled) {
-
                     // Disconnect the old observer before creating a new one to prevent conflicts.
                     if (observer) {
                         observer.disconnect();
@@ -166,7 +187,7 @@ async function OnPopupCreation(popup: any) {
                     const hasSpecificMenuItems = (container: HTMLElement) => {
                         // _1n7Wloe5jZ6fSuvV18NNWI == contextMenuItem
                         const itemsText = Array.from(container.querySelectorAll(`div.${findModule(e => e.ContextMenuMouseOverlay).contextMenuItem}.contextMenuItem`))
-                            .map(el => el.textContent.trim());
+                            .map(el => el.textContent?.trim());
                         // "CustomArt_EditLogoPosition":"Adjust Logo Position"
                         while (!findModule(e => e["CustomArt_EditLogoPosition"]));
                         console.log("[steam-logo-pos] CustomArt_EditLogoPosition == ", findModule(e => e["CustomArt_EditLogoPosition"])["CustomArt_EditLogoPosition"]);
